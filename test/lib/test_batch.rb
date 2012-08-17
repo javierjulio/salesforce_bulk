@@ -5,8 +5,7 @@ class TestBatch < Test::Unit::TestCase
   def setup
     options = {
       :username => 'myusername', 
-      :password => 'mypassword',
-      :token => "somelongtoken"
+      :password => 'mypassword'
     }
     
     @client = SalesforceBulk::Client.new(options)

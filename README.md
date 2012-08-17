@@ -27,10 +27,10 @@ To contribute, fork this repo, create a topic branch, make changes, then send a 
 
     require 'salesforce_bulk'
     
-    client = SalesforceBulk::Client.new(username: 'MyUsername', password: 'MyPassword', token: 'MySecurityToken')
+    client = SalesforceBulk::Client.new(username: 'MyUsername', password: 'MyPasswordWithSecurtyToken')
     client.authenticate
 
-Optional keys include host (default: login.salesforce.com), version (default: 24.0) and debugging (default: false).
+Optional keys include `:login_host` (default: login.salesforce.com) and `:version` (default: 24.0)
 
 ### Configuring from a YAML file
 
@@ -39,7 +39,6 @@ The optional keys mentioned in the Basic Configuration section can also be used 
     ---
     username: MyUsername
     password: MyPassword
-    token: MySecurityToken
 
 Then in a Ruby script:
 

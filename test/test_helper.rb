@@ -12,12 +12,12 @@ class Test::Unit::TestCase
   end
   
   def api_url(client)
-    "https://#{client.host}/services/async/#{client.version}/"
+    "https://#{client.login_host}/services/async/#{client.version}/"
   end
   
   def bypass_authentication(client)
     client.instance_variable_set('@session_id', '123456789')
-    client.instance_variable_set('@host', 'na9.salesforce.com')
+    client.instance_variable_set('@login_host', 'na9.salesforce.com')
     client.instance_variable_set('@instance_host', 'na9.salesforce.com')
   end
   

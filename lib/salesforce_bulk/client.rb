@@ -1,20 +1,14 @@
 module SalesforceBulk
   # Interface for operating the Salesforce Bulk REST API
   class Client
-    # If true, print API debugging information to stdout. Defaults to false.
-    attr_accessor :debugging
-    
     # The host to use for authentication. Defaults to login.salesforce.com.
-    attr_accessor :host
+    attr_accessor :login_host
     
     # The instance host to use for API calls. Determined from login response.
     attr_accessor :instance_host
     
     # The Salesforce password
     attr_accessor :password
-    
-    # The Salesforce security token
-    attr_accessor :token
     
     # The Salesforce username
     attr_accessor :username
@@ -28,18 +22,16 @@ module SalesforceBulk
         options.symbolize_keys!
       end
       
-      options = {:debugging => false, :host => 'login.salesforce.com', :version => 24.0}.merge(options)
+      options = {:login_host => 'login.salesforce.com', :version => 24.0}.merge(options)
       
-      options.assert_valid_keys(:username, :password, :token, :debugging, :host, :version)
+      options.assert_valid_keys(:username, :password, :login_host, :version)
       
       self.username = options[:username]
-      self.password = "#{options[:password]}#{options[:token]}"
-      self.token = options[:token]
-      self.debugging = options[:debugging]
-      self.host = options[:host]
+      self.password = "#{options[:password]}"
+      self.login_host = options[:login_host]
       self.version = options[:version]
       
-      @api_path_prefix = "/services/async/#{self.version}/"
+      @api_path_prefix = "/services/async/#{version}/"
       @valid_operations = [:delete, :insert, :update, :upsert, :query]
       @valid_concurrency_modes = ['Parallel', 'Serial']
     end
@@ -51,20 +43,21 @@ module SalesforceBulk
       xml += ' xmlns:env="http://schemas.xmlsoap.org/soap/envelope/">'
       xml += "<env:Body>"
       xml += '<n1:login xmlns:n1="urn:partner.soap.sforce.com">'
-      xml += "<n1:username>#{self.username}</n1:username>"
-      xml += "<n1:password>#{self.password}</n1:password>"
+      xml += "<n1:username>#{username}</n1:username>"
+      xml += "<n1:password>#{password}</n1:password>"
       xml += "</n1:login>"
       xml += "</env:Body>"
-      xml += "</env:Envelope>"
+      xml += "</env:Envelope>\n"
       
-      response = http_post("/services/Soap/u/#{self.version}", xml, 'Content-Type' => 'text/xml', 'SOAPAction' => 'login')
+      response = http_post("/services/Soap/u/#{version}", xml, 'Content-Type' => 'text/xml', 'SOAPAction' => 'login')
       
-      data = XmlSimple.xml_in(response.body, :ForceArray => false)
+      data = XmlSimple.xml_in(response.body, 'ForceArray' => false)
       result = data['Body']['loginResponse']['result']
       
       @session_id = result['sessionId']
       
       self.instance_host = "#{instance_id(result['serverUrl'])}.salesforce.com"
+      self
     end
     
     def abort_job(jobId)
@@ -74,7 +67,7 @@ module SalesforceBulk
       xml += "</jobInfo>"
       
       response = http_post("job/#{jobId}", xml)
-      data = XmlSimple.xml_in(response.body, :ForceArray => false)
+      data = XmlSimple.xml_in(response.body, 'ForceArray' => false)
       Job.new_from_xml(data)
     end
     
@@ -122,7 +115,7 @@ module SalesforceBulk
       xml += "</jobInfo>"
       
       response = http_post("job", xml)
-      data = XmlSimple.xml_in(response.body, :ForceArray => false)
+      data = XmlSimple.xml_in(response.body, 'ForceArray' => false)
       job = Job.new_from_xml(data)
     end
     
@@ -192,25 +185,25 @@ module SalesforceBulk
       xml += "</jobInfo>"
       
       response = http_post("job/#{jobId}", xml)
-      data = XmlSimple.xml_in(response.body, :ForceArray => false)
+      data = XmlSimple.xml_in(response.body, 'ForceArray' => false)
       Job.new_from_xml(data)
     end
     
     def job_info(jobId)
       response = http_get("job/#{jobId}")
-      data = XmlSimple.xml_in(response.body, :ForceArray => false)
+      data = XmlSimple.xml_in(response.body, 'ForceArray' => false)
       Job.new_from_xml(data)
     end
     
     def http_post(path, body, headers={})
-      host = self.host
-      
       headers = {'Content-Type' => 'application/xml'}.merge(headers)
       
       if @session_id
         headers['X-SFDC-Session'] = @session_id
-        host = self.instance_host
+        host = instance_host
         path = "#{@api_path_prefix}#{path}"
+      else
+        host = self.login_host
       end
       
       response = https_request(host).post(path, body, headers)

@@ -6,7 +6,6 @@ class TestInitialization < Test::Unit::TestCase
     @options = {
       :username => 'MyUsername',
       :password => 'MyPassword',
-      :token => 'MySecurityToken'
     }
     
     @client = SalesforceBulk::Client.new(@options)
@@ -15,35 +14,29 @@ class TestInitialization < Test::Unit::TestCase
   test "initialization with default values" do
     assert_not_nil @client
     assert_equal @client.username, @options[:username]
-    assert_equal @client.password, "#{@options[:password]}#{@options[:token]}"
-    assert_equal @client.token, @options[:token]
-    assert_equal @client.host, 'login.salesforce.com'
+    assert_equal @client.password, @options[:password]
+    assert_equal @client.login_host, 'login.salesforce.com'
     assert_equal @client.version, 24.0
-    assert_equal @client.debugging, false
   end
   
   test "initialization overriding all default values" do
-    @options.merge!({:debugging => true, :host => 'newhost.salesforce.com', :version => 1.0})
+    @options.merge!({:login_host => 'newhost.salesforce.com', :version => 1.0})
     
     client = SalesforceBulk::Client.new(@options)
     
-    assert_equal client.username, @options[:username]
-    assert_equal client.password, "#{@options[:password]}#{@options[:token]}"
-    assert_equal client.token, @options[:token]
-    assert_equal client.debugging, @options[:debugging]
-    assert_equal client.host, @options[:host]
-    assert_equal client.version, @options[:version]
+    assert_equal client.username,   @options[:username]
+    assert_equal client.password,   @options[:password]
+    assert_equal client.login_host, @options[:login_host]
+    assert_equal client.version,    @options[:version]
   end
   
   test "initialization with a YAML file" do
     client = SalesforceBulk::Client.new(fixture_path('config.yml'))
     
-    assert_equal client.username, 'MyUsername'
-    assert_equal client.password, 'MyPasswordMySecurityToken'
-    assert_equal client.token, 'MySecurityToken'
-    assert_equal client.debugging, true
-    assert_equal client.host, 'myhost.mydomain.com'
-    assert_equal client.version, 88.0
+    assert_equal client.username,   'MyUsername'
+    assert_equal client.password,   'MyPassword'
+    assert_equal client.login_host, 'myhost.mydomain.com'
+    assert_equal client.version,    88.0
   end
   
   test "initialization with invalid key raises ArgumentError" do
@@ -57,16 +50,17 @@ class TestInitialization < Test::Unit::TestCase
     request = fixture("login_request.xml")
     response = fixture("login_response.xml")
     
-    stub_request(:post, "https://#{@client.host}/services/Soap/u/24.0")
+    stub_request(:post, "https://#{@client.login_host}/services/Soap/u/24.0")
       .with(:body => request, :headers => headers)
       .to_return(:body => response, :status => 200)
     
-    @client.authenticate()
+    result = @client.authenticate()
     
-    assert_requested :post, "https://#{@client.host}/services/Soap/u/24.0", :body => request, :headers => headers, :times => 1
+    assert_requested :post, "https://#{@client.login_host}/services/Soap/u/24.0", :body => request, :headers => headers, :times => 1
     
     assert_equal @client.instance_host, 'na9-api.salesforce.com'
     assert_equal @client.instance_variable_get('@session_id'), '00DE0000000YSKp!AQ4AQNQhDKLMORZx2NwZppuKfure.ChCmdI3S35PPxpNA5MHb3ZVxhYd5STM3euVJTI5.39s.jOBT.3mKdZ3BWFDdIrddS8O'
+    assert_equal @client, result
   end
   
   test "parsing instance id from server url" do
