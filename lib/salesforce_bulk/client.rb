@@ -1,4 +1,8 @@
 module SalesforceBulk
+  if RUBY_VERSION < "1.9"
+    CSV = ::FasterCSV
+  end
+
   # Interface for operating the Salesforce Bulk REST API
   class Client
     # The host to use for authentication. Defaults to login.salesforce.com.
@@ -94,7 +98,7 @@ module SalesforceBulk
     end
     
     def add_job(operation, sobject, options={})
-      operation = operation.to_sym.downcase
+      operation = operation.to_s.downcase.to_sym
       
       raise ArgumentError.new("Invalid operation: #{operation}") unless @valid_operations.include?(operation)
       
